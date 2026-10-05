@@ -47,38 +47,6 @@ public class Validation {
     }
 
 
-    static double validateBookingDates(
-            String checkIn,
-            String checkOut,
-            double pricePerDay) throws Exception {
-
-        LocalDate checkInDate;
-        LocalDate checkOutDate;
-
-        try {
-
-            checkInDate = LocalDate.parse(checkIn);
-            checkOutDate = LocalDate.parse(checkOut);
-
-        } catch (Exception e) {
-
-            throw new Exception("Invalid date format. Please use yyyy-MM-dd.");
-        }
-
-        if (!checkOutDate.isAfter(checkInDate)) {
-
-            throw new Exception("Check-out date must be after check-in date.");
-        }
-
-        // This works only with same-month dates
-        int days = checkOutDate.getDayOfMonth()
-                - checkInDate.getDayOfMonth();
-
-        double billAmount = days * pricePerDay;
-
-        return billAmount;
-    }
-
 
     static void validateCustomerId(Connection con, int customerId) throws Exception {
 

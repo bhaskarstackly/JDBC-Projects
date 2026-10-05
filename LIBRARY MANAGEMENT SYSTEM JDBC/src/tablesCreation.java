@@ -34,13 +34,14 @@ public class tablesCreation {
     }
 
     static void createBookIssuesTable(Connection con) throws Exception {
+
         String sql = "CREATE TABLE IF NOT EXISTS book_issues (" +
                 "issue_id INT PRIMARY KEY AUTO_INCREMENT, " +
                 "book_id INT NOT NULL, " +
                 "member_id INT NOT NULL, " +
                 "issue_date DATE NOT NULL, " +
-                "return_date DATE, " +
-                "fine DECIMAL(10,2), " +
+                "return_date DATE NULL, " +
+                "fine DECIMAL(10,2) DEFAULT 0, " +
                 "FOREIGN KEY (book_id) REFERENCES books(book_id), " +
                 "FOREIGN KEY (member_id) REFERENCES members(member_id)" +
                 ")";
@@ -61,7 +62,7 @@ public class tablesCreation {
             System.out.print("Enter book price: ");
             double price = sc.nextDouble();
             sc.nextLine();
-            
+
             System.out.print("Enter book status (Available/Issued): ");
             String status = sc.nextLine();
 
@@ -75,7 +76,6 @@ public class tablesCreation {
             ps.executeUpdate();
 
             System.out.println("Book added successfully.");
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -103,7 +103,6 @@ public class tablesCreation {
             }
 
             System.out.println("----------------------------------------------------------------");
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -126,11 +125,11 @@ public class tablesCreation {
             System.out.print("Enter new price: ");
             double price = sc.nextDouble();
             sc.nextLine();
-            
+
             System.out.print("Enter book status (Available/Issued): ");
             String status = sc.nextLine();
 
-            String sql = "UPDATE books SET title = ?, author = ?, price = ? ,status= ? WHERE book_id = ?";
+            String sql = "UPDATE books SET title = ?, author = ?, price = ?, status = ? WHERE book_id = ?";
 
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setString(1, title);
@@ -144,16 +143,13 @@ public class tablesCreation {
             if (rows > 0) {
                 System.out.println("Book updated successfully.");
             }
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
     static void deleteBook(Connection con, Scanner sc) {
-
         try {
-
             System.out.print("Enter book ID to delete: ");
             int bookId = sc.nextInt();
             sc.nextLine();
@@ -187,9 +183,7 @@ public class tablesCreation {
             if (rows > 0) {
                 System.out.println("Book deleted successfully.");
             }
-
         } catch (Exception e) {
-
             System.out.println(e.getMessage());
         }
     }
@@ -216,7 +210,6 @@ public class tablesCreation {
             ps.executeUpdate();
 
             System.out.println("Member added successfully.");
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -243,7 +236,6 @@ public class tablesCreation {
             }
 
             System.out.println("----------------------------------------------------------------");
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -281,16 +273,13 @@ public class tablesCreation {
             if (rows > 0) {
                 System.out.println("Member updated successfully.");
             }
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
     static void deleteMember(Connection con, Scanner sc) {
-
         try {
-
             System.out.print("Enter member ID to delete: ");
             int memberId = sc.nextInt();
             sc.nextLine();
@@ -332,18 +321,15 @@ public class tablesCreation {
             if (rows > 0) {
                 System.out.println("Member deleted successfully.");
             }
-
         } catch (Exception e) {
-
             System.out.println(e.getMessage());
         }
     }
-///////////////////////////////////////////IssueBook/////////////////////////////////////////////////////////////////////////////
-    
-    static void issueBook(Connection con, Scanner sc) {
-    	
-        try {
 
+    // Issue Book
+
+    static void issueBook(Connection con, Scanner sc) {
+        try {
             System.out.print("Enter book ID: ");
             int bookId = sc.nextInt();
 
@@ -360,8 +346,60 @@ public class tablesCreation {
             checkPs.setInt(1, bookId);
 
             ResultSet rs = checkPs.executeQuery();
-
             rs.next();
+
+            String status = rs.getString("status");
+
+            if (!status.equals("Available")) {
+                System.out.println("Book is not available.");
+                return;
+            }
+
+            System.out.print("Enter issue date (yyyy-MM-dd): ");
+            String issueDate = sc.nextLine();
+
+            java.sql.Date issueSqlDate = java.sql.Date.valueOf(issueDate);
+
+            String sql = "INSERT INTO book_issues (book_id, member_id, issue_date) " +
+                    "VALUES (?, ?, ?)";
+
+            PreparedStatement ps = con.prepareStatement(sql);
+            ps.setInt(1, bookId);
+            ps.setInt(2, memberId);
+            ps.setDate(3, issueSqlDate);
+            ps.executeUpdate();
+
+            String updateSql = "UPDATE books SET status = 'Issued' WHERE book_id = ?";
+
+            PreparedStatement updatePs = con.prepareStatement(updateSql);
+            updatePs.setInt(1, bookId);
+            updatePs.executeUpdate();
+
+            System.out.println("Book issued successfully.");
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+    }
+
+    static void returnBook(Connection con, Scanner sc) {
+        try {
+            System.out.print("Enter book ID: ");
+            int bookId = sc.nextInt();
+            sc.nextLine();
+
+            Validation.validateBookId(con, bookId);
+
+            String checkSql = "SELECT status FROM books WHERE book_id = ?";
+
+            PreparedStatement checkPs = con.prepareStatement(checkSql);
+            checkPs.setInt(1, bookId);
+
+            ResultSet rs = checkPs.executeQuery();
+
+            if (!rs.next()) {
+                System.out.println("Book not found.");
+                return;
+            }
 
             String status = rs.getString("status");
 
@@ -369,17 +407,29 @@ public class tablesCreation {
                 System.out.println("Book is not currently issued.");
                 return;
             }
-            
-            System.out.print("Enter issue date (yyyy-MM-dd): ");
-            String issueDate = sc.nextLine();
+
+            String issueSql = "SELECT issue_id, issue_date FROM book_issues " +
+                    "WHERE book_id = ? AND return_date IS NULL";
+
+            PreparedStatement issuePs = con.prepareStatement(issueSql);
+            issuePs.setInt(1, bookId);
+
+            ResultSet issueRs = issuePs.executeQuery();
+
+            if (!issueRs.next()) {
+                System.out.println("Issue record not found.");
+                return;
+            }
+
+            int issueId = issueRs.getInt("issue_id");
+            java.sql.Date issueDate = issueRs.getDate("issue_date");
 
             System.out.print("Enter return date (yyyy-MM-dd): ");
             String returnDate = sc.nextLine();
 
-            java.sql.Date issueSqlDate = java.sql.Date.valueOf(issueDate);
             java.sql.Date returnSqlDate = java.sql.Date.valueOf(returnDate);
 
-            long days = (returnSqlDate.getTime() - issueSqlDate.getTime())
+            long days = (returnSqlDate.getTime() - issueDate.getTime())
                     / (1000 * 60 * 60 * 24);
 
             if (days < 0) {
@@ -395,25 +445,29 @@ public class tablesCreation {
 
             System.out.println("Days kept: " + days);
             System.out.println("Fine: ₹" + fine);
-            
-            String sql = "INSERT INTO book_issues (book_id, member_id, issue_date, return_date, fine) " +
-                    "VALUES (?, ?, ?, ?, ?)";
 
-            PreparedStatement ps = con.prepareStatement(sql);
+            String updateSql = "UPDATE book_issues SET return_date = ?, fine = ? " +
+                    "WHERE issue_id = ?";
 
-            ps.setInt(1, bookId);
-            ps.setInt(2, memberId);
-            ps.setDate(3, issueSqlDate);
-            ps.setDate(4, returnSqlDate);
-            ps.setDouble(5, fine);
+            PreparedStatement updatePs = con.prepareStatement(updateSql);
+            updatePs.setDate(1, returnSqlDate);
+            updatePs.setDouble(2, fine);
+            updatePs.setInt(3, issueId);
+            updatePs.executeUpdate();
 
-            ps.executeUpdate();
+            String bookSql = "UPDATE books SET status = 'Available' WHERE book_id = ?";
 
-        }catch (Exception ex) {
-                    System.out.println(ex.getMessage());
-                }
-            }
-    
+            PreparedStatement bookPs = con.prepareStatement(bookSql);
+            bookPs.setInt(1, bookId);
+            bookPs.executeUpdate();
+
+            System.out.println("Book returned successfully.");
+            System.out.println("Book is now available.");
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+    }
+
     static void fetchBookIssues(Connection con) {
         try {
             String sql = "SELECT bi.issue_id, b.title, m.member_name, " +
@@ -426,8 +480,10 @@ public class tablesCreation {
             ResultSet rs = stmt.executeQuery(sql);
 
             System.out.println("--------------------------------------------------------------------------------");
+
             System.out.printf("%-10s %-25s %-15s %-15s %-15s %-10s%n",
                     "Issue ID", "Book", "Member", "Issue Date", "Return Date", "Fine");
+
             System.out.println("--------------------------------------------------------------------------------");
 
             while (rs.next()) {
@@ -441,16 +497,13 @@ public class tablesCreation {
             }
 
             System.out.println("--------------------------------------------------------------------------------");
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
     static void deleteBookIssue(Connection con, Scanner sc) {
-
         try {
-
             System.out.print("Enter issue ID to delete: ");
             int issueId = sc.nextInt();
             sc.nextLine();
@@ -460,21 +513,16 @@ public class tablesCreation {
             String sql = "DELETE FROM book_issues WHERE issue_id = ?";
 
             PreparedStatement ps = con.prepareStatement(sql);
-
             ps.setInt(1, issueId);
 
             int rows = ps.executeUpdate();
 
             if (rows > 0) {
-
                 System.out.println("Book issue deleted successfully.");
-
             }
-
         } catch (Exception e) {
-
             System.out.println(e.getMessage());
-
         }
     }
 }
+    

@@ -28,23 +28,16 @@ public class main {
 //            ('Effective Java', 'Joshua Bloch', 850, 'Available'),
 //            ('Clean Code', 'Robert Martin', 700, 'Issued'),
 //            ('The Alchemist', 'Paulo Coelho', 450, 'Available'),
-//            ('Atomic Habits', 'James Clear', 550, 'Issued'),
-//            ('Head First Java', 'Kathy Sierra', 900, 'Available');
-//            (' Java', 'Bloch', 850, 'Issued'),
             
 //            MEMBERS (member_name, email, phone)
 //            ('Bhaskar', 'bhaskar@gmail.com', '9876543210'),
 //            ('Rahul', 'rahul@gmail.com', '9876543211'),
 //            ('Anil', 'anil@gmail.com', '9876543212'),
-//            ('Kiran', 'kiran@gmail.com', '9876543213'),
-//            ('Arjun', 'arjun@gmail.com', '9876543214');
             
 //          Book_issues (book_id, member_id, issue_date, return_date, fine)
 //            (2, 1, '2026-09-30', '2026-10-04', 10),
 //            (4, 1, '2026-09-28', '2026-10-04', 30);
-//            (6, 2, '2026-10-01', 2026-10-03, 00),
-
-            
+//            (6, 2, '2026-10-01', 2026-10-03, 00),        
 
             do {
 
@@ -166,10 +159,11 @@ public class main {
                     do {
 
                         System.out.println("\n--------- BOOK ISSUE MANAGEMENT ---------");
-                        System.out.println("1. Issue & Return Book");
-                        System.out.println("2. Fetch Book Issues");
-                        System.out.println("3. Delete Book Issue");
-                        System.out.println("4. Back");
+                        System.out.println("1. Issue Book");
+                        System.out.println("2. Return Book");
+                        System.out.println("3. Fetch Book Issues");
+                        System.out.println("4. Delete Book Issue");
+                        System.out.println("5. Back");
                         System.out.println("-----------------------------------------");
 
                         System.out.print("Enter your choice: ");
@@ -179,25 +173,41 @@ public class main {
                         switch (issueChoice) {
 
                         case 1:
+
                             tablesCreation.issueBook(con, sc);
+
                             break;
+
                         case 2:
-                            tablesCreation.fetchBookIssues(con);
+
+                            tablesCreation.returnBook(con, sc);
+
                             break;
 
                         case 3:
-                            tablesCreation.deleteBookIssue(con, sc);
+
+                            tablesCreation.fetchBookIssues(con);
+
                             break;
 
                         case 4:
+
+                            tablesCreation.deleteBookIssue(con, sc);
+
+                            break;
+
+                        case 5:
+
                             System.out.println("Returning to main menu...");
+
                             break;
 
                         default:
+
                             System.out.println("Invalid choice.");
                         }
 
-                    } while (issueChoice != 4);
+                    } while (issueChoice != 5);
 
                     break;
 

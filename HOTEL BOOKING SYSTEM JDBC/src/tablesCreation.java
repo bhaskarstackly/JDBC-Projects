@@ -41,17 +41,17 @@ public class tablesCreation {
 
     static void createBookingsTable(Connection con) throws SQLException {
 
-        String sql =
-            "CREATE TABLE IF NOT EXISTS bookings (" +
-            "booking_id INT PRIMARY KEY AUTO_INCREMENT, " +
-            "customer_id INT NOT NULL, " +
-            "room_id INT NOT NULL, " +
-            "check_in_date DATE NOT NULL, " +
-            "check_out_date DATE NOT NULL, " +
-            "bill_amount DECIMAL(10,2), " +
-            "FOREIGN KEY (customer_id) REFERENCES customers(customer_id), " +
-            "FOREIGN KEY (room_id) REFERENCES rooms(room_id)" +
-            ")";
+    	String sql =
+    	        "CREATE TABLE IF NOT EXISTS bookings (" +
+    	        "booking_id INT PRIMARY KEY AUTO_INCREMENT, " +
+    	        "room_id INT NOT NULL, " +
+    	        "customer_id INT NOT NULL, " +
+    	        "check_in_date DATE NULL, " +
+    	        "check_out_date DATE NULL, " +
+    	        "bill_amount DECIMAL(10,2), " +
+    	        "FOREIGN KEY (customer_id) REFERENCES customers(customer_id), " +
+    	        "FOREIGN KEY (room_id) REFERENCES rooms(room_id)" +
+    	        ")";
 
         try (Statement stmt = con.createStatement()) {
             stmt.execute(sql);
@@ -208,6 +208,21 @@ public class tablesCreation {
 
             Validation.validateRoomId(con, roomId);
 
+            String checkSql = "SELECT COUNT(*) FROM bookings WHERE room_id = ?";
+
+            PreparedStatement checkPs = con.prepareStatement(checkSql);
+
+            checkPs.setInt(1, roomId);
+
+            ResultSet rs = checkPs.executeQuery();
+
+            rs.next();
+
+            if (rs.getInt(1) > 0) {
+                System.out.println("Cannot delete room. It is booked.");
+                return;
+            }
+
             String sql = "DELETE FROM rooms WHERE room_id = ?";
 
             PreparedStatement ps = con.prepareStatement(sql);
@@ -217,22 +232,17 @@ public class tablesCreation {
             int rows = ps.executeUpdate();
 
             if (rows > 0) {
-
                 System.out.println("Room deleted successfully.");
-
             } else {
-
                 System.out.println("Room not found.");
-
             }
 
         } catch (Exception e) {
 
-            System.out.println("Cannot delete room. It may be booked.");
+            System.out.println(e.getMessage());
 
         }
     }
-
 
     ////////////////////////////////////////////////// Customer Operations //////////////////////////////////////////////////////////
 
@@ -382,6 +392,21 @@ public class tablesCreation {
 
             Validation.validateCustomerId(con, customerId);
 
+            String checkSql = "SELECT COUNT(*) FROM bookings WHERE customer_id = ?";
+
+            PreparedStatement checkPs = con.prepareStatement(checkSql);
+
+            checkPs.setInt(1, customerId);
+
+            ResultSet rs = checkPs.executeQuery();
+
+            rs.next();
+
+            if (rs.getInt(1) > 0) {
+                System.out.println("Cannot delete customer. Customer has bookings.");
+                return;
+            }
+
             String sql = "DELETE FROM customers WHERE customer_id = ?";
 
             PreparedStatement ps = con.prepareStatement(sql);
@@ -391,112 +416,96 @@ public class tablesCreation {
             int rows = ps.executeUpdate();
 
             if (rows > 0) {
-
                 System.out.println("Customer deleted successfully.");
-
             } else {
-
                 System.out.println("Customer not found.");
-
             }
 
         } catch (Exception e) {
 
-            System.out.println(e.getMessage());
+            System.out.println("Cannot delete customer.");
 
         }
     }
-
 
     //////////////////////////////////////////////////// Booking Operations ////////////////////////////////////////////////////////
 
     static void addBooking(Connection con, Scanner sc) {
-
         try {
-
+        	System.out.print("Enter room ID: ");
+            int roomId = sc.nextInt();
+            sc.nextLine();
+            Validation.validateRoomId(con, roomId);
+            
             System.out.print("Enter customer ID: ");
-
             int customerId = sc.nextInt();
-
+            sc.nextLine();
             Validation.validateCustomerId(con, customerId);
 
-            System.out.print("Enter room ID: ");
-
-            int roomId = sc.nextInt();
-
-            sc.nextLine();
-
-            Validation.validateRoomId(con, roomId);
-
-            System.out.print("Enter check-in date (yyyy-MM-dd): ");
-
-            String checkIn = sc.nextLine();
-
-            System.out.print("Enter check-out date (yyyy-MM-dd): ");
-
-            String checkOut = sc.nextLine();
-
-            String priceSql =
-                    "SELECT price_per_day, status FROM rooms WHERE room_id = ?";
-
-            PreparedStatement pricePs = con.prepareStatement(priceSql);
-
-            pricePs.setInt(1, roomId);
-
-            ResultSet rs = pricePs.executeQuery();
+            String roomSql = "SELECT status FROM rooms WHERE room_id = ?";
+            PreparedStatement roomPs = con.prepareStatement(roomSql);
+            roomPs.setInt(1, roomId);
+            ResultSet rs = roomPs.executeQuery();
 
             if (!rs.next()) {
-
                 System.out.println("Room not found.");
-
                 return;
             }
-
-            double pricePerDay = rs.getDouble("price_per_day");
 
             String status = rs.getString("status");
 
             if (!status.equals("Available")) {
-
                 System.out.println("Room is not available.");
-
                 return;
             }
 
-            double billAmount =
-                    Validation.validateBookingDates(checkIn, checkOut, pricePerDay);
+            System.out.print("Do you want to check-in? (yes/no): ");
+            String choice = sc.nextLine();
 
-            String sql =
-                    "INSERT INTO bookings " +
-                    "(customer_id, room_id, check_in_date, check_out_date, bill_amount) " +
-                    "VALUES (?, ?, ?, ?, ?)";
+            if (choice.equalsIgnoreCase("yes")) {
+                System.out.print("Enter check-in date: ");
+                String checkIn = sc.nextLine();
+                java.sql.Date checkInDate = java.sql.Date.valueOf(checkIn);
 
-            PreparedStatement ps = con.prepareStatement(sql);
+                String sql = "INSERT INTO bookings (room_id, customer_id, check_in_date) VALUES (?, ?, ?)";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, roomId);
+                ps.setInt(2, customerId);
+                ps.setDate(3, checkInDate);
+                ps.executeUpdate();
 
-            ps.setInt(1, customerId);
+                String updateSql = "UPDATE rooms SET status = 'Occupied' WHERE room_id = ?";
+                PreparedStatement updatePs = con.prepareStatement(updateSql);
+                updatePs.setInt(1, roomId);
+                updatePs.executeUpdate();
+                
+                System.out.println("Booking Occupied(Checkined) successfully.");
 
-            ps.setInt(2, roomId);
+            } else if (choice.equalsIgnoreCase("no")) {
+                String sql = "INSERT INTO bookings (room_id, customer_id, check_in_date) VALUES (?, ?, ?)";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setInt(1, roomId);
+                ps.setInt(2, customerId);
+                ps.setDate(3, null);
+                ps.executeUpdate();
 
-            ps.setDate(3, java.sql.Date.valueOf(checkIn));
+                String updateSql = "UPDATE rooms SET status = 'Booked' WHERE room_id = ?";
+                PreparedStatement updatePs = con.prepareStatement(updateSql);
+                updatePs.setInt(1, roomId);
+                updatePs.executeUpdate();
+                
+                System.out.println("Room Booked successfully.");
+                
+            } else {
+                System.out.println("Please enter yes or no.");
+                return;
+            }
 
-            ps.setDate(4, java.sql.Date.valueOf(checkOut));
-
-            ps.setDouble(5, billAmount);
-
-            ps.executeUpdate();
-
-            System.out.println("Booking added successfully.");
-
-            System.out.println("Bill amount: " + billAmount);
 
         } catch (Exception e) {
-
             System.out.println(e.getMessage());
-
         }
     }
-
-
     static void fetchBookings(Connection con) {
 
         try {
@@ -567,4 +576,84 @@ public class tablesCreation {
 
         }
     }
-}
+    
+    static void calculateBill(Connection con, Scanner sc) {
+   
+    	    try {
+    	        System.out.print("Enter room ID: ");
+    	        int roomId = sc.nextInt();
+    	        sc.nextLine();
+    	        Validation.validateRoomId(con, roomId);
+
+    	        String roomSql = "SELECT price_per_day, status FROM rooms WHERE room_id = ?";
+    	        PreparedStatement roomPs = con.prepareStatement(roomSql);
+    	        roomPs.setInt(1, roomId);
+    	        ResultSet roomRs = roomPs.executeQuery();
+
+    	        if (!roomRs.next()) {
+    	            System.out.println("Room not found.");
+    	            return;
+    	        }
+
+    	        String status = roomRs.getString("status");
+
+    	        if (!status.equals("Occupied")) {
+    	            System.out.println("Room is not occupied.");
+    	            return;
+    	        }
+
+    	        double pricePerDay = roomRs.getDouble("price_per_day");
+
+    	        System.out.print("Enter customer ID: ");
+    	        int customerId = sc.nextInt();
+    	        sc.nextLine();
+    	        Validation.validateCustomerId(con, customerId);
+
+    	        String bookingSql = "SELECT check_in_date FROM bookings WHERE room_id = ? AND customer_id = ?";
+    	        PreparedStatement bookingPs = con.prepareStatement(bookingSql);
+    	        bookingPs.setInt(1, roomId);
+    	        bookingPs.setInt(2, customerId);
+    	        ResultSet bookingRs = bookingPs.executeQuery();
+
+    	        if (!bookingRs.next()) {
+    	            System.out.println("Booking not found.");
+    	            return;
+    	        }
+
+    	        java.sql.Date checkInDate = bookingRs.getDate("check_in_date");
+
+    	        System.out.print("Enter check-out date (yyyy-MM-dd): ");
+    	        String checkOut = sc.nextLine();
+    	        java.sql.Date checkOutDate = java.sql.Date.valueOf(checkOut);
+
+    	        long days = (checkOutDate.getTime() - checkInDate.getTime())
+    	                / (1000 * 60 * 60 * 24);
+
+    	        double billAmount = days * pricePerDay;
+
+    	        System.out.println("Total Days: " + days);
+    	        System.out.println("Total Bill: ₹" + billAmount);
+
+    	        String updateSql = "UPDATE bookings SET check_out_date = ?, bill_amount = ? " +
+    	                           "WHERE room_id = ? AND customer_id = ?";
+    	        PreparedStatement ps = con.prepareStatement(updateSql);
+    	        ps.setDate(1, checkOutDate);
+    	        ps.setDouble(2, billAmount);
+    	        ps.setInt(3, roomId);
+    	        ps.setInt(4, customerId);
+
+    	        ps.executeUpdate();
+
+    	        String roomUpdateSql = "UPDATE rooms SET status = 'Available' WHERE room_id = ?";
+    	        PreparedStatement roomUpdatePs = con.prepareStatement(roomUpdateSql);
+    	        roomUpdatePs.setInt(1, roomId);
+    	        roomUpdatePs.executeUpdate();
+
+    	        System.out.println("Bill added successfully.");
+    	        System.out.println("Room is now available.");
+
+    	    } catch (Exception e) {
+    	        System.out.println(e.getMessage());
+    	    }
+    	}
+ }

@@ -12,6 +12,21 @@ public class main {
         String user = "root";
         String password = "MySql@123";
 
+//        -- ROOMS
+//         'Single', 1500, 'Available'
+//         'Double', 2500, 'Available'
+//         'Deluxe', 3500, 'Available'
+
+//        -- CUSTOMERS
+//         'Bhaskar', 'bhaskar@gmail.com', '9876543210'
+//         'Rahul', 'rahul@gmail.com', '9876543211'
+//         'Anil', 'anil@gmail.com', '9876543212'
+
+//        -- BOOKINGS
+//         1001, 101, '2026-10-05', '2026-10-08'
+//         1002, 102, '2026-10-06', '2026-10-10'
+//         1003, 103, '2026-10-07', '2026-10-09'
+
         try {
 
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -21,51 +36,6 @@ public class main {
             tablesCreation.createRoomsTable(con);
             tablesCreation.createCustomersTable(con);
             tablesCreation.createBookingsTable(con);
-
-
-            // ================= ROOM SAMPLE DATA =================
-
-            // tablesCreation.addRoom(con, sc);
-
-            // | Room id | Room Type | Price/Day | Status    |
-            // |-------------|-----------|-----------|-----------|
-            // | 1         | Single    | 1500      | Available |
-            // | 2         | Double    | 2500      | Booked    |
-            // | 3         | Deluxe    | 3500      | Occupied  |
-            // | 4         | Single    | 1500      | Available |
-            // | 5         | Double    | 2500      | Booked    |
-            // | 6         | Deluxe    | 3500      | Available |
-
-
-            // ================= CUSTOMER SAMPLE DATA =================
-
-            // tablesCreation.addCustomer(con, sc);
-
-            // | Customer ID | Customer Name | Email              | Phone      |
-            // |-------------|---------------|--------------------|------------|
-            // | 1           | Bhaskar       | bhaskar@gmail.com   | 9876543210 |
-            // | 2           | Rahul         | rahul@gmail.com     | 9876543211 |
-            // | 3           | Anil          | anil@gmail.com      | 9876543212 |
-            // | 4           | Kiran         | kiran@gmail.com     | 9876543213 |
-            // | 5           | Arjun         | arjun@gmail.com     | 9876543214 |
-
-
-            // ================= BOOKING SAMPLE DATA =================
-
-            // tablesCreation.addBooking(con, sc);
-
-            // (customer_id, room_number, check_in_date, check_out_date, bill_amount)
-
-            // (1, 1, '2026-10-01', '2026-10-03', 3000),
-            // (2, 4, '2026-10-02', '2026-10-05', 4500),
-            // (3, 6, '2026-10-05', '2026-10-08', 10500);
-            
-            // (4, 1, '2026-10-10', '2026-10-13', 4500);-- test -add
-            //(5, 3, '2026-10-15', '2026-10-18', 10500);--test- add
-            // 2, 2, 2026-10-01, 2026-10-03---------------- test-fail
-
-
-            // ================= MAIN MENU =================
 
             int mainChoice;
 
@@ -195,7 +165,8 @@ public class main {
                             System.out.println("1. Add Booking");
                             System.out.println("2. Fetch Bookings");
                             System.out.println("3. Delete Booking");
-                            System.out.println("4. Back");
+                            System.out.println("4. Calculate Bill");
+                            System.out.println("5. Back");
                             System.out.println("--------------------------------------");
 
                             System.out.print("Enter your choice: ");
@@ -216,8 +187,12 @@ public class main {
                                 case 3:
                                     tablesCreation.deleteBooking(con, sc);
                                     break;
-
+                                    
                                 case 4:
+                                	tablesCreation.calculateBill(con, sc);
+                                    break;
+
+                                case 5:
                                     System.out.println("Returning to main menu");
                                     break;
 
@@ -225,7 +200,7 @@ public class main {
                                     System.out.println("Invalid choice.");
                             }
 
-                        } while (bookingChoice != 4);
+                        } while (bookingChoice != 5);
 
                         break;
 
